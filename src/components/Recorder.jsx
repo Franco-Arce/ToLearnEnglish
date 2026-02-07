@@ -18,7 +18,14 @@ export default function Recorder({ onTranscript, onStop }) {
         speechManager.current = new SpeechManager(
             (text) => onTranscript(text),
             () => setIsRecording(false),
-            (error) => console.error('Speech Error:', error)
+            (error) => {
+                console.error('Speech Error:', error);
+                setIsRecording(false);
+                if (onStop) onStop(); // Trigger analysis even on error if we have some text
+                if (error === 'network') {
+                    alert('Network error: Please check your connection. Web Speech API requires internet access.');
+                }
+            }
         );
 
         return () => {
@@ -90,10 +97,12 @@ export default function Recorder({ onTranscript, onStop }) {
             speechManager.current.stop();
             setIsRecording(false);
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             // Clear canvas
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (canvasRef.current) {
+                const ctx = canvasRef.current.getContext('2d');
+                if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
 
             if (onStop) onStop();
         }

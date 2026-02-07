@@ -50,8 +50,12 @@ export class SpeechManager {
     }
 
     stop() {
-        if (this.recognition && this.isListening) {
-            this.recognition.stop();
+        if (this.recognition) {
+            try {
+                this.recognition.stop();
+            } catch (e) {
+                console.warn('Error stopping recognition:', e);
+            }
             this.isListening = false;
         }
     }
