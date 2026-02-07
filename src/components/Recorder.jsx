@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { SpeechManager } from '../lib/speech';
 
-export default function Recorder({ onTranscript }) {
+export default function Recorder({ onTranscript, onStop }) {
     const [isRecording, setIsRecording] = useState(false);
     const [permission, setPermission] = useState(false);
     const speechManager = useRef(null);
@@ -94,6 +94,8 @@ export default function Recorder({ onTranscript }) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (onStop) onStop();
         }
     };
 
@@ -111,8 +113,8 @@ export default function Recorder({ onTranscript }) {
                 whileTap={{ scale: 0.95 }}
                 onClick={toggleRecording}
                 className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all ${isRecording
-                        ? 'bg-red-500 shadow-red-500/30'
-                        : 'bg-blue-500 shadow-blue-500/30'
+                    ? 'bg-red-500 shadow-red-500/30'
+                    : 'bg-blue-500 shadow-blue-500/30'
                     }`}
             >
                 {isRecording ? <Square fill="white" size={24} /> : <Mic color="white" size={28} />}

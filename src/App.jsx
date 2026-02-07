@@ -11,12 +11,11 @@ function App() {
 
   const handleTranscript = (text) => {
     setTranscript((prev) => prev + ' ' + text);
-    // Mock analysis trigger for demo purposes
-    if (text.length > 5) {
-      // Simulate a delay for "AI processing"
-      setTimeout(() => {
-        setAnalysis(true);
-      }, 2000);
+  };
+
+  const handleStop = () => {
+    if (transcript.length > 5) {
+      setAnalysis(true);
     }
   };
 
@@ -45,7 +44,7 @@ function App() {
           className="flex flex-col gap-6"
         >
           {/* Recorder Component */}
-          <Recorder onTranscript={handleTranscript} />
+          <Recorder onTranscript={handleTranscript} onStop={handleStop} />
 
           {/* Upload Section (Placeholder for next task) */}
           <div className="glass-panel p-6 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors">
