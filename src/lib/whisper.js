@@ -1,5 +1,3 @@
-import WhisperWorker from '../worker.js?worker';
-
 export class WhisperManager {
     constructor(onResult, onStatus) {
         this.onResult = onResult;
@@ -8,12 +6,64 @@ export class WhisperManager {
         this.audioContext = null;
         this.mediaStream = null;
         this.processor = null;
-        this.audioBuffer = []; // Store Float32 chunks
+        this.audioBuffer = [];
         this.isLoaded = false;
 
-        // Initialize Worker using Vite's explicit worker import
+        // Inline Worker Code to avoid 404s and bundling issues
+        // Imports transformers from CDN to ensure WASM/assets are loaded correctly without local config
+        const workerCode = `
+            import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+            env.allowLocalModels = false;
+            env.useBrowserCache = true;
+
+            let transcriber = null;
+
+            self.addEventListener('message', async (event) => {
+                const message = event.data;
+
+                switch (message.type) {
+                    case 'load':
+                        try {
+                            if (!transcriber) {
+                                // Use tiny.en for speed
+                                transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+                                self.postMessage({ type: 'ready' });
+                            } else {
+                                self.postMessage({ type: 'ready' });
+                            }
+                        } catch (error) {
+                            console.error('Worker Load Error:', error);
+                            self.postMessage({ type: 'error', error: error.message });
+                        }
+                        break;
+
+                    case 'process':
+                        try {
+                            if (!transcriber) {
+                                throw new Error('Transcriber not loaded');
+                            }
+                            
+                            const output = await transcriber(message.audio, {
+                                chunk_length_s: 30,
+                                stride_length_s: 5,
+                                language: 'english',
+                                task: 'transcribe',
+                            });
+
+                            self.postMessage({ type: 'result', text: output.text });
+                        } catch (error) {
+                             console.error('Worker Process Error:', error);
+                             self.postMessage({ type: 'error', error: error.message });
+                        }
+                        break;
+                }
+            });
+        `;
+
         try {
-            this.worker = new WhisperWorker();
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            this.worker = new Worker(URL.createObjectURL(blob), { type: 'module' });
 
             this.worker.onmessage = (event) => {
                 const { type, text, error } = event.data;
@@ -21,7 +71,6 @@ export class WhisperManager {
                     this.isLoaded = true;
                     if (this.onStatus) this.onStatus('ready');
                 } else if (type === 'result') {
-                    // When processing finishes
                     if (this.onResult) this.onResult(text);
                     if (this.onStatus) this.onStatus('stopped');
                 } else if (type === 'error') {
@@ -30,10 +79,15 @@ export class WhisperManager {
                 }
             };
 
+            this.worker.onerror = (e) => {
+                console.error('Worker Error Event:', e);
+                if (this.onStatus) this.onStatus('error', 'Failed to load AI Worker (Script Error)');
+            };
+
             this.worker.postMessage({ type: 'load' });
         } catch (e) {
-            console.error('Worker Error:', e);
-            if (this.onStatus) this.onStatus('error', 'Failed to load AI Worker');
+            console.error('Worker Init Error:', e);
+            if (this.onStatus) this.onStatus('error', 'Failed to initialize AI Worker');
         }
     }
 
