@@ -163,7 +163,8 @@ export default function Recorder({ onTranscript, onStop }) {
 
             <p className="mt-4 text-sm font-medium text-gray-400">
                 {status === 'loading' ? 'Downloading AI (One time only)...' :
-                    isRecording ? 'Listening (Local AI)...' : 'Tap to Speak'}
+                    status === 'processing' ? 'Transcribing...' :
+                        isRecording ? 'Listening (Local AI)...' : 'Tap to Speak'}
             </p>
         </div>
     );
