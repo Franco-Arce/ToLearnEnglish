@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         // Minimal Multipart construction for a single file "file" and model "model"
         // This is low-level but avoids npm install errors if user environment is restricted.
 
-        const model = 'distil-whisper-large-v3-en';
+        const model = 'whisper-large-v3-turbo';
         const filename = 'recording.webm';
 
         let parts = [];
