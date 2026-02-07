@@ -1,3 +1,5 @@
+import WhisperWorker from '../worker.js?worker';
+
 export class WhisperManager {
     constructor(onResult, onStatus) {
         this.onResult = onResult;
@@ -6,25 +8,33 @@ export class WhisperManager {
         this.audioContext = null;
         this.mediaStream = null;
         this.processor = null;
+        this.audioBuffer = []; // Store Float32 chunks
         this.isLoaded = false;
 
-        // Initialize Worker
-        this.worker = new Worker(new URL('../worker.js', import.meta.url), { type: 'module' });
+        // Initialize Worker using Vite's explicit worker import
+        try {
+            this.worker = new WhisperWorker();
 
-        this.worker.onmessage = (event) => {
-            const { type, text, error } = event.data;
-            if (type === 'ready') {
-                this.isLoaded = true;
-                if (this.onStatus) this.onStatus('ready');
-            } else if (type === 'result') {
-                if (this.onResult) this.onResult(text);
-            } else if (type === 'error') {
-                console.error('Whisper Worker Error:', error);
-                if (this.onStatus) this.onStatus('error', error);
-            }
-        };
+            this.worker.onmessage = (event) => {
+                const { type, text, error } = event.data;
+                if (type === 'ready') {
+                    this.isLoaded = true;
+                    if (this.onStatus) this.onStatus('ready');
+                } else if (type === 'result') {
+                    // When processing finishes
+                    if (this.onResult) this.onResult(text);
+                    if (this.onStatus) this.onStatus('stopped');
+                } else if (type === 'error') {
+                    console.error('Whisper Worker Error:', error);
+                    if (this.onStatus) this.onStatus('error', error);
+                }
+            };
 
-        this.worker.postMessage({ type: 'load' });
+            this.worker.postMessage({ type: 'load' });
+        } catch (e) {
+            console.error('Worker Error:', e);
+            if (this.onStatus) this.onStatus('error', 'Failed to load AI Worker');
+        }
     }
 
     async start() {
@@ -35,16 +45,12 @@ export class WhisperManager {
 
         try {
             this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.audioBuffer = []; // Reset buffer
 
-            // Create AudioContext at 16kHz (required by Whisper)
-            // If browser doesn't support forcing sampleRate, we might need a resampler, 
-            // but most modern browsers do support it now or handle it.
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-
             const source = this.audioContext.createMediaStreamSource(this.mediaStream);
 
-            // Use ScriptProcessor for broad compatibility (AudioWorklet is better but more complex to setup in one file)
-            // Buffer size 4096 = ~0.25s of audio at 16kHz
+            // 4096 samples = ~0.25s
             this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
             source.connect(this.processor);
@@ -52,11 +58,8 @@ export class WhisperManager {
 
             this.processor.onaudioprocess = (e) => {
                 const inputData = e.inputBuffer.getChannelData(0);
-                // Send copy of data to worker
-                this.worker.postMessage({
-                    type: 'process',
-                    audio: Array.from(inputData) // Copy to avoid detachment issues or shared buffer races
-                });
+                // Store copy of data
+                this.audioBuffer.push(new Float32Array(inputData));
             };
 
             if (this.onStatus) this.onStatus('recording');
@@ -68,6 +71,7 @@ export class WhisperManager {
     }
 
     stop() {
+        // 1. Stop Recording
         if (this.mediaStream) {
             this.mediaStream.getTracks().forEach(track => track.stop());
             this.mediaStream = null;
@@ -83,7 +87,29 @@ export class WhisperManager {
             this.audioContext = null;
         }
 
-        if (this.onStatus) this.onStatus('stopped');
+        // 2. Transcribe
+        if (this.audioBuffer.length > 0) {
+            if (this.onStatus) this.onStatus('processing'); // Notify UI we are transcribing
+
+            // Flatten buffer
+            const totalLength = this.audioBuffer.reduce((acc, chunk) => acc + chunk.length, 0);
+            const fullAudio = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of this.audioBuffer) {
+                fullAudio.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Send to worker
+            if (this.worker) {
+                this.worker.postMessage({
+                    type: 'process',
+                    audio: fullAudio
+                });
+            }
+        } else {
+            if (this.onStatus) this.onStatus('stopped');
+        }
     }
 
     terminate() {
