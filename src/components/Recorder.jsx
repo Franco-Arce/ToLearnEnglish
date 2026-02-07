@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, Square, Loader2 } from 'lucide-react';
-import { SpeechManager } from '../lib/speech';
+import { WhisperManager } from '../lib/whisper';
 
 export default function Recorder({ onTranscript, onStop }) {
     const [isRecording, setIsRecording] = useState(false);
-    const [permission, setPermission] = useState(false);
-    const speechManager = useRef(null);
+    const [status, setStatus] = useState('loading'); // loading, ready, recording, error
+    const whisperManager = useRef(null);
     const canvasRef = useRef(null);
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
@@ -14,22 +14,40 @@ export default function Recorder({ onTranscript, onStop }) {
     const animationFrameRef = useRef(null);
 
     useEffect(() => {
-        // Initialize Speech Manager
-        speechManager.current = new SpeechManager(
-            (text) => onTranscript(text),
-            () => setIsRecording(false),
-            (error) => {
-                console.error('Speech Error:', error);
-                setIsRecording(false);
-                if (onStop) onStop(); // Trigger analysis even on error if we have some text
-                if (error === 'network') {
-                    alert('Network error: Please check your connection. Web Speech API requires internet access.');
+        // Initialize Whisper Manager
+        whisperManager.current = new WhisperManager(
+            (text) => {
+                // If text is valid, send it up
+                if (text && text.trim().length > 0) {
+                    onTranscript(text);
+                }
+            },
+            (newStatus, error) => {
+                console.log('Whisper Status:', newStatus, error);
+                if (newStatus === 'ready') setStatus('ready');
+                if (newStatus === 'recording') {
+                    setIsRecording(true);
+                    setStatus('recording');
+                }
+                if (newStatus === 'processing') {
+                    setIsRecording(false);
+                    setStatus('processing');
+                }
+                if (newStatus === 'stopped') {
+                    setIsRecording(false);
+                    setStatus('ready');
+                }
+                if (newStatus === 'error') {
+                    console.error(error);
+                    alert('AI Error: ' + error);
+                    setIsRecording(false);
+                    setStatus('ready');
                 }
             }
         );
 
         return () => {
-            if (speechManager.current) speechManager.current.stop();
+            if (whisperManager.current) whisperManager.current.terminate();
             if (audioContextRef.current) audioContextRef.current.close();
             cancelAnimationFrame(animationFrameRef.current);
         };
@@ -37,10 +55,12 @@ export default function Recorder({ onTranscript, onStop }) {
 
     const startVisualizer = async () => {
         try {
+            // We need a separate stream for visualization if we want to keep it simple, 
+            // or we could hook into the manager. For simplicity/robustness, let's just grab a stream.
+            // Note: WhisperManager grabs its own stream. It's fine to ask twice (permission usually persists).
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            setPermission(true);
 
-            if (!audioContextRef.current) {
+            if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
                 audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
             }
 
@@ -57,6 +77,8 @@ export default function Recorder({ onTranscript, onStop }) {
             const height = canvas.height;
 
             const draw = () => {
+                if (!canvasRef.current) return;
+
                 animationFrameRef.current = requestAnimationFrame(draw);
                 analyserRef.current.getByteFrequencyData(dataArray);
 
@@ -83,25 +105,27 @@ export default function Recorder({ onTranscript, onStop }) {
 
             draw();
         } catch (err) {
-            console.error('Error accessing microphone:', err);
-            setPermission(false);
+            console.error('Visualizer Error:', err);
         }
     };
 
-    const toggleRecording = () => {
+    const toggleRecording = async () => {
         if (!isRecording) {
+            if (status !== 'ready') return;
             startVisualizer();
-            speechManager.current.start();
-            setIsRecording(true);
+            await whisperManager.current.start();
         } else {
-            speechManager.current.stop();
-            setIsRecording(false);
+            whisperManager.current.stop();
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            // Clear canvas
+
             if (canvasRef.current) {
                 const ctx = canvasRef.current.getContext('2d');
                 if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
+
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+                audioContextRef.current = null;
             }
 
             if (onStop) onStop();
@@ -112,7 +136,9 @@ export default function Recorder({ onTranscript, onStop }) {
         <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-900/50 rounded-2xl border border-white/5 backdrop-blur-md">
             <div className="relative w-full h-32 mb-6 bg-black/20 rounded-xl overflow-hidden flex items-center justify-center">
                 {!isRecording && (
-                    <div className="text-gray-500 text-sm">Waveform Visualizer</div>
+                    <div className="text-gray-500 text-sm">
+                        {status === 'loading' ? 'Loading AI Model...' : 'Waveform Visualizer'}
+                    </div>
                 )}
                 <canvas ref={canvasRef} width={600} height={128} className="w-full h-full absolute inset-0" />
             </div>
@@ -121,16 +147,23 @@ export default function Recorder({ onTranscript, onStop }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={toggleRecording}
-                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all ${isRecording
-                    ? 'bg-red-500 shadow-red-500/30'
-                    : 'bg-blue-500 shadow-blue-500/30'
+                disabled={status === 'loading'}
+                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all ${status === 'loading' ? 'bg-gray-600 cursor-not-allowed' :
+                    isRecording
+                        ? 'bg-red-500 shadow-red-500/30'
+                        : 'bg-blue-500 shadow-blue-500/30'
                     }`}
             >
-                {isRecording ? <Square fill="white" size={24} /> : <Mic color="white" size={28} />}
+                {status === 'loading' ? (
+                    <Loader2 className="animate-spin text-white" size={24} />
+                ) : (
+                    isRecording ? <Square fill="white" size={24} /> : <Mic color="white" size={28} />
+                )}
             </motion.button>
 
             <p className="mt-4 text-sm font-medium text-gray-400">
-                {isRecording ? 'Listening...' : 'Tap to Speak'}
+                {status === 'loading' ? 'Downloading AI (One time only)...' :
+                    isRecording ? 'Listening (Local AI)...' : 'Tap to Speak'}
             </p>
         </div>
     );
