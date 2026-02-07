@@ -5,9 +5,13 @@ import Recorder from './components/Recorder';
 import FeedbackCard from './components/FeedbackCard';
 import GrammarRef from './components/GrammarRef';
 
+import SettingsModal from './components/SettingsModal';
+import { Settings } from 'lucide-react';
+
 function App() {
   const [transcript, setTranscript] = useState('');
-  const [analysis, setAnalysis] = useState(null); // Placeholder for future AI analysis
+  const [analysis, setAnalysis] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleTranscript = (text) => {
     setTranscript((prev) => prev + ' ' + text);
@@ -21,6 +25,8 @@ function App() {
 
   return (
     <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -29,9 +35,16 @@ function App() {
         <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-500">
           English Accelerator
         </h1>
-        <nav className="flex gap-4">
+        <nav className="flex gap-4 items-center">
           <button className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Dashboard</button>
           <button className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Practice</button>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-full transition-all"
+            title="Configure API Key"
+          >
+            <Settings size={20} />
+          </button>
         </nav>
       </motion.header>
 
