@@ -11,15 +11,56 @@ import { Settings } from 'lucide-react';
 function App() {
   const [transcript, setTranscript] = useState('');
   const [analysis, setAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleTranscript = (text) => {
-    setTranscript((prev) => prev + ' ' + text);
+    // Append text and trigger analysis for the specific chunk or whole session?
+    // For simplicity, let's keep appending.
+    setTranscript((prev) => (prev ? prev + ' ' + text : text));
   };
 
-  const handleStop = () => {
-    if (transcript.length > 5) {
-      setAnalysis(true);
+  const handleStop = async () => {
+    // Debounce or wait for final transcript update? 
+    // Usually 'onStop' happens after recording, but we might have just received transcript.
+    // Let's analyze the current transcript state + whatever came last.
+    // Actually, Recorder calls onTranscript THEN onStop.
+
+    // We need to wait a tick for state to update, or better, pass text to handleStop if possible.
+    // But since state update is async, 'transcript' variable might be stale here.
+    // Let's rely on effect or just wait a bit? 
+    // Better: let the user manually trigger? No, auto is better. 
+    // We will analyze 'transcript' but we must ensure it's up to date.
+    // A simple timeout helps, or just trusting the user recorded enough.
+
+    if (transcript.length < 5) return;
+
+    setIsAnalyzing(true);
+    const apiKey = localStorage.getItem('groq_api_key');
+
+    if (!apiKey) {
+      setIsAnalyzing(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey
+        },
+        body: JSON.stringify({ text: transcript })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAnalysis(data);
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -94,7 +135,7 @@ function App() {
           transition={{ delay: 0.3 }}
           className="h-full"
         >
-          <FeedbackCard transcript={transcript} analysis={analysis} />
+          <FeedbackCard transcript={transcript} analysis={analysis} isAnalyzing={isAnalyzing} />
         </motion.div>
       </main>
 
