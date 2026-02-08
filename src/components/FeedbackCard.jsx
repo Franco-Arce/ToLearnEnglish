@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle, Sparkles, Loader2, Lightbulb, Volume2 } from 'lucide-react';
 
-export default function FeedbackCard({ transcript, analysis, isAnalyzing }) {
+export default function FeedbackCard({ transcript, analysis, isAnalyzing, preferredVoiceURI }) {
     const [voices, setVoices] = useState([]);
 
     useEffect(() => {
@@ -22,21 +22,25 @@ export default function FeedbackCard({ transcript, analysis, isAnalyzing }) {
 
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Priority list for natural English voices
-        const priorityPatterns = [
-            /Google US English/i,
-            /Google UK English/i,
-            /Microsoft David/i,
-            /Microsoft Zira/i,
-            /^en-US$/i,
-            /^en-GB$/i,
-            /en-/i
-        ];
+        // Priority 1: User's preferred voice
+        let selectedVoice = voices.find(v => v.voiceURI === preferredVoiceURI);
 
-        let selectedVoice = null;
-        for (const pattern of priorityPatterns) {
-            selectedVoice = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
-            if (selectedVoice) break;
+        if (!selectedVoice) {
+            // Priority 2: Natural English voices
+            const priorityPatterns = [
+                /Google US English/i,
+                /Google UK English/i,
+                /Microsoft David/i,
+                /Microsoft Zira/i,
+                /^en-US$/i,
+                /^en-GB$/i,
+                /en-/i
+            ];
+
+            for (const pattern of priorityPatterns) {
+                selectedVoice = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
+                if (selectedVoice) break;
+            }
         }
 
         if (selectedVoice) {

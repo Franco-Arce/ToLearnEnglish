@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Send, Mic, Volume2, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import Recorder from './Recorder';
 
-export default function ConversationMode({ level, roleplay }) {
+export default function ConversationMode({ level, roleplay, preferredVoiceURI }) {
     const [messages, setMessages] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [voices, setVoices] = useState([]);
@@ -29,11 +29,14 @@ export default function ConversationMode({ level, roleplay }) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
 
-        const priorityPatterns = [/Google US English/i, /Google UK English/i, /en-US/i, /en-/i];
-        let selectedVoice = null;
-        for (const pattern of priorityPatterns) {
-            selectedVoice = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
-            if (selectedVoice) break;
+        let selectedVoice = voices.find(v => v.voiceURI === preferredVoiceURI);
+
+        if (!selectedVoice) {
+            const priorityPatterns = [/Google US English/i, /Google UK English/i, /en-US/i, /en-/i];
+            for (const pattern of priorityPatterns) {
+                selectedVoice = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
+                if (selectedVoice) break;
+            }
         }
 
         if (selectedVoice) {

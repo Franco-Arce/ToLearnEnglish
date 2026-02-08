@@ -1,10 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Key, Check } from 'lucide-react';
+import { X, Key, Check, Volume2 } from 'lucide-react';
 
-export default function SettingsModal({ isOpen, onClose, level, setLevel, roleplay, setRoleplay }) {
+export default function SettingsModal({
+    isOpen,
+    onClose,
+    level,
+    setLevel,
+    roleplay,
+    setRoleplay,
+    preferredVoiceURI,
+    setPreferredVoiceURI
+}) {
     const [apiKey, setApiKey] = useState('');
     const [saved, setSaved] = useState(false);
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        const loadVoices = () => {
+            const allVoices = window.speechSynthesis.getVoices();
+            // Filter for English voices only
+            const englishVoices = allVoices.filter(v => v.lang.startsWith('en'));
+            setVoices(englishVoices);
+        };
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }, []);
 
     useEffect(() => {
         const storedKey = localStorage.getItem('groq_api_key');
@@ -75,6 +96,32 @@ export default function SettingsModal({ isOpen, onClose, level, setLevel, rolepl
                                     <option value="travel">Travel & Airport</option>
                                     <option value="doctor">Medical Appointment</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Voice Accent (TTS)
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={preferredVoiceURI}
+                                        onChange={(e) => setPreferredVoiceURI(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer text-sm"
+                                    >
+                                        <option value="">Default (Auto-detect English)</option>
+                                        {voices.map(voice => (
+                                            <option key={voice.voiceURI} value={voice.voiceURI}>
+                                                {voice.name} ({voice.lang})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                        <Volume2 size={16} />
+                                    </div>
+                                </div>
+                                <p className="mt-2 text-[10px] text-gray-500 italic">
+                                    If the AI speaks with a Spanish accent, manually select an English (US or UK) voice from the list above.
+                                </p>
                             </div>
 
                             <div>

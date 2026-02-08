@@ -22,6 +22,7 @@ function App() {
   // New Settings State
   const [level, setLevel] = useState(localStorage.getItem('app_level') || 'intermediate');
   const [roleplay, setRoleplay] = useState(localStorage.getItem('app_roleplay') || 'general');
+  const [preferredVoiceURI, setPreferredVoiceURI] = useState(localStorage.getItem('app_voice_uri') || '');
 
   // Session History State
   const [sessions, setSessions] = useState(() => {
@@ -105,9 +106,11 @@ function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         level={level}
-        setLevel={setLevel}
+        setLevel={(l) => { setLevel(l); localStorage.setItem('app_level', l); }}
         roleplay={roleplay}
-        setRoleplay={setRoleplay}
+        setRoleplay={(r) => { setRoleplay(r); localStorage.setItem('app_roleplay', r); }}
+        preferredVoiceURI={preferredVoiceURI}
+        setPreferredVoiceURI={(v) => { setPreferredVoiceURI(v); localStorage.setItem('app_voice_uri', v); }}
       />
 
       <motion.header
@@ -195,7 +198,12 @@ function App() {
 
               {/* Right Column: Feedback */}
               <div className="h-full">
-                <FeedbackCard transcript={transcript} analysis={analysis} isAnalyzing={isAnalyzing} />
+                <FeedbackCard
+                  transcript={transcript}
+                  analysis={analysis}
+                  isAnalyzing={isAnalyzing}
+                  preferredVoiceURI={preferredVoiceURI}
+                />
               </div>
             </motion.div>
           ) : (
@@ -206,7 +214,7 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               className="glass-panel border-white/10"
             >
-              <ConversationMode level={level} roleplay={roleplay} />
+              <ConversationMode level={level} roleplay={roleplay} preferredVoiceURI={preferredVoiceURI} />
             </motion.div>
           )}
         </AnimatePresence>
