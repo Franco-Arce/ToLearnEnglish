@@ -18,14 +18,36 @@ export default function SettingsModal({
 
     useEffect(() => {
         const loadVoices = () => {
-            const allVoices = window.speechSynthesis.getVoices();
-            // Filter for English voices only
-            const englishVoices = allVoices.filter(v => v.lang.startsWith('en'));
-            setVoices(englishVoices);
+            let allVoices = window.speechSynthesis.getVoices();
+
+            // Some browsers need a moment or a retry
+            if (allVoices.length === 0) {
+                // Try again in a bit if empty
+                setTimeout(() => {
+                    allVoices = window.speechSynthesis.getVoices();
+                    setVoices(allVoices);
+                }, 100);
+            }
+
+            setVoices(allVoices);
         };
         loadVoices();
-        window.speechSynthesis.onvoiceschanged = loadVoices;
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
     }, []);
+
+    const testVoice = () => {
+        const utterance = new SpeechSynthesisUtterance("Hello, this is a test of the selected voice.");
+        const voice = voices.find(v => v.voiceURI === preferredVoiceURI);
+        if (voice) {
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
+        } else {
+            utterance.lang = 'en-US';
+        }
+        window.speechSynthesis.speak(utterance);
+    };
 
     useEffect(() => {
         const storedKey = localStorage.getItem('groq_api_key');
@@ -102,25 +124,43 @@ export default function SettingsModal({
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Voice Accent (TTS)
                                 </label>
-                                <div className="relative">
-                                    <select
-                                        value={preferredVoiceURI}
-                                        onChange={(e) => setPreferredVoiceURI(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer text-sm"
-                                    >
-                                        <option value="">Default (Auto-detect English)</option>
-                                        {voices.map(voice => (
-                                            <option key={voice.voiceURI} value={voice.voiceURI}>
-                                                {voice.name} ({voice.lang})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                        <Volume2 size={16} />
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <select
+                                            value={preferredVoiceURI}
+                                            onChange={(e) => setPreferredVoiceURI(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer text-sm"
+                                        >
+                                            <option value="">Default (Auto-detect English)</option>
+                                            {voices
+                                                .sort((a, b) => {
+                                                    const aIsEn = a.lang.startsWith('en');
+                                                    const bIsEn = b.lang.startsWith('en');
+                                                    if (aIsEn && !bIsEn) return -1;
+                                                    if (!aIsEn && bIsEn) return 1;
+                                                    return 0;
+                                                })
+                                                .map(voice => (
+                                                    <option key={voice.voiceURI} value={voice.voiceURI}>
+                                                        {voice.lang.startsWith('en') ? '🇺🇸 ' : '🌐 '}{voice.name} ({voice.lang})
+                                                    </option>
+                                                ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                            <Volume2 size={16} />
+                                        </div>
                                     </div>
+                                    <button
+                                        onClick={testVoice}
+                                        type="button"
+                                        className="px-4 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-sky-400 hover:bg-white/10 transition-colors"
+                                        title="Test voice"
+                                    >
+                                        Test
+                                    </button>
                                 </div>
                                 <p className="mt-2 text-[10px] text-gray-500 italic">
-                                    If the AI speaks with a Spanish accent, manually select an English (US or UK) voice from the list above.
+                                    Select a voice with 🇺🇸 or "en-" to ensure English pronunciation.
                                 </p>
                             </div>
 
