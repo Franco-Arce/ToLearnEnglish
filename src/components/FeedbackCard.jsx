@@ -4,8 +4,18 @@ import { AlertCircle, CheckCircle, Sparkles, Loader2, Lightbulb, Volume2 } from 
 export default function FeedbackCard({ transcript, analysis, isAnalyzing }) {
     const speak = (text) => {
         if (!window.speechSynthesis) return;
-        window.speechSynthesis.cancel(); // Stop current speech
+        window.speechSynthesis.cancel();
+
         const utterance = new SpeechSynthesisUtterance(text);
+
+        // Find an English voice
+        const voices = window.speechSynthesis.getVoices();
+        const englishVoice = voices.find(v => v.lang.startsWith('en-')) || voices.find(v => v.lang === 'en-US');
+
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+        }
+
         utterance.lang = 'en-US';
         utterance.rate = 0.9;
         window.speechSynthesis.speak(utterance);
