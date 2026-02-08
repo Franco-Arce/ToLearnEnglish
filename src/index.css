@@ -1,15 +1,16 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-dark: #0f172a;
-  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-dark: #020617;
+  --bg-card: rgba(15, 23, 42, 0.7);
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-primary: #38bdf8;
-  --accent-glow: rgba(56, 189, 248, 0.5);
-  --error: #ef4444;
-  --success: #22c55e;
-  --font-sans: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --text-secondary: #64748b;
+  --accent-primary: #0ea5e9;
+  --accent-indigo: #6366f1;
+  --accent-glow: rgba(14, 165, 233, 0.3);
+  --error: #f43f5e;
+  --success: #10b981;
+  --font-sans: 'Outfit', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 body {
@@ -17,15 +18,28 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-dark);
   color: var(--text-primary);
-  /* Futuristic Background Mesh */
+  /* Deep Space Mesh */
   background-image:
-    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(14, 165, 233, 0.03) 0px, transparent 80%);
   background-attachment: fixed;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+.animate-glow {
+  animation: glow 4s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 10px -5px var(--accent-glow);
+  }
+
+  to {
+    box-shadow: 0 0 20px 2px var(--accent-glow);
+  }
 }
 
 /* Glassmorphism Utility Class */

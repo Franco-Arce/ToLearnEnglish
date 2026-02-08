@@ -5,6 +5,7 @@ import Recorder from './components/Recorder';
 import FeedbackCard from './components/FeedbackCard';
 import GrammarRef from './components/GrammarRef';
 import SessionHistory from './components/SessionHistory';
+import LandingView from './components/LandingView';
 
 import SettingsModal from './components/SettingsModal';
 import { Settings } from 'lucide-react';
@@ -14,6 +15,7 @@ function App() {
   const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [hasKey, setHasKey] = useState(!!localStorage.getItem('groq_api_key'));
 
   // New Settings State
   const [level, setLevel] = useState(localStorage.getItem('app_level') || 'intermediate');
@@ -49,7 +51,7 @@ function App() {
 
     if (!apiKey) {
       setIsAnalyzing(false);
-      alert('Please configure your API Key');
+      setHasKey(false);
       return;
     }
 
@@ -91,8 +93,12 @@ function App() {
     }
   };
 
+  if (!hasKey) {
+    return <LandingView onComplete={() => setHasKey(true)} />;
+  }
+
   return (
-    <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
+    <div className="min-h-screen p-4 md:p-8 flex flex-col items-center bg-[radial-gradient(ellipse_at_top,_var(--accent-glow)_0%,_transparent_60%)]">
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -105,20 +111,25 @@ function App() {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-6xl flex justify-between items-center mb-8 md:mb-12 glass-panel p-6"
+        className="w-full max-w-6xl flex justify-between items-center mb-8 md:mb-12 glass-panel p-6 border-white/10"
       >
-        <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-500">
-          English Accelerator
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-sky-500 rounded-lg shadow-lg shadow-sky-500/20">
+            <Sparkles className="text-white" size={20} />
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+            English Accelerator
+          </h1>
+        </div>
         <nav className="flex gap-4 items-center">
-          <button className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Dashboard</button>
-          <button className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Practice</button>
+          <button className="hidden md:block text-sm font-bold text-slate-400 hover:text-white transition-colors">Dashboard</button>
+          <button className="hidden md:block text-sm font-bold text-slate-400 hover:text-white transition-colors">Practice</button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-full transition-all"
-            title="Configure API Key"
+            className="p-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/10"
+            title="Settings"
           >
-            <Settings size={20} />
+            <Settings size={22} />
           </button>
         </nav>
       </motion.header>
@@ -138,29 +149,31 @@ function App() {
             onStart={() => setTranscript('')}
           />
 
-          {/* Upload Section (Placeholder for next task) */}
-          <div className="glass-panel p-6 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors">
+          {/* Upload Section */}
+          <div className="glass-panel p-6 flex items-center justify-between cursor-not-allowed border-white/5 opacity-80 group">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-500/20 rounded-lg text-purple-400">
+              <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
                 <Upload size={24} />
               </div>
               <div>
-                <h3 className="font-bold text-gray-200">Upload Audio</h3>
-                <p className="text-xs text-gray-400">Analyze pre-recorded files (MP3, WAV)</p>
+                <h3 className="font-bold text-slate-200">Upload Audio</h3>
+                <p className="text-xs text-slate-500">Analyze pre-recorded files (MP3, WAV)</p>
               </div>
             </div>
-            <div className="px-4 py-2 text-xs font-bold text-white bg-white/10 rounded-full">
+            <div className="px-3 py-1 text-[10px] font-black tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
               COMING SOON
             </div>
           </div>
 
           {/* Quick Tips */}
-          <div className="glass-panel p-6">
+          <div className="glass-panel p-6 border-white/5">
             <div className="flex items-center gap-3 mb-4">
-              <BookOpen className="text-sky-400" />
-              <h3 className="font-bold text-lg text-gray-200">Quick Tips</h3>
+              <div className="p-2 bg-sky-500/10 rounded-lg text-sky-400">
+                <BookOpen size={20} />
+              </div>
+              <h3 className="font-bold text-lg text-slate-200">Learning Tips</h3>
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-sm text-slate-400 leading-relaxed font-medium">
               Try to speak clearly and at a moderate pace. The AI analyzes your grammar, pronunciation, and fluency in real-time to provide instant feedback.
             </p>
           </div>
