@@ -9,7 +9,7 @@ export default async function handler(req) {
     }
 
     try {
-        const { text } = await req.json();
+        const { text, level = 'intermediate', roleplay = 'general' } = await req.json();
         const apiKey = req.headers.get('x-api-key') || process.env.GROQ_API_KEY;
 
         if (!apiKey) {
@@ -22,16 +22,21 @@ export default async function handler(req) {
 
         const systemPrompt = `
       You are an expert English teacher. Analyze the user's speech transcript.
+      
+      CONTEXT:
+      - Student Level: ${level} (Adjust your tips and score accordingly).
+      - Scenario: ${roleplay === 'general' ? 'Daily conversation' : `Roleplay as: ${roleplay}`}.
+      
       Return ONLY a JSON object with this exact structure (no markdown, no extra text):
       {
         "grammar_corrections": [
           { "original": "substring of error", "correction": "corrected substring", "explanation": "brief reason" }
         ],
-        "fluency_score": 0-100 (integer, baselined on sentence complexity and length),
-        "tips": ["tip 1", "tip 2"],
-        "positive_feedback": "one sentence of praise"
+        "fluency_score": 0-100 (integer, baselined on level complexity),
+        "tips": ["tip focused on ${level} level", "tip 2"],
+        "positive_feedback": "one sentence of praise relevant to the ${roleplay} context"
       }
-      If the English is perfect, grammar_corrections should be empty.
+      If the English is perfect for the ${level} level, grammar_corrections should be empty.
     `;
 
         const userPrompt = `Analyze this text: "${text}"`;

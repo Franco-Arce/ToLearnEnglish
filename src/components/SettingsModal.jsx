@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Key, Check } from 'lucide-react';
 
-export default function SettingsModal({ isOpen, onClose }) {
+export default function SettingsModal({ isOpen, onClose, level, setLevel, roleplay, setRoleplay }) {
     const [apiKey, setApiKey] = useState('');
     const [saved, setSaved] = useState(false);
 
@@ -13,9 +13,10 @@ export default function SettingsModal({ isOpen, onClose }) {
 
     const handleSave = () => {
         localStorage.setItem('groq_api_key', apiKey);
+        localStorage.setItem('app_level', level);
+        localStorage.setItem('app_roleplay', roleplay);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
-        // Optional: onClose(); 
     };
 
     return (
@@ -46,6 +47,38 @@ export default function SettingsModal({ isOpen, onClose }) {
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Difficulty Level
+                                </label>
+                                <select
+                                    value={level}
+                                    onChange={(e) => setLevel(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer"
+                                >
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Roleplay Scenario
+                                </label>
+                                <select
+                                    value={roleplay}
+                                    onChange={(e) => setRoleplay(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer"
+                                >
+                                    <option value="general">Daily Conversation</option>
+                                    <option value="restaurant">Ordering at a Restaurant</option>
+                                    <option value="interview">Job Interview</option>
+                                    <option value="travel">Travel & Airport</option>
+                                    <option value="doctor">Medical Appointment</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Groq API Key
                                 </label>
                                 <input
@@ -56,9 +89,9 @@ export default function SettingsModal({ isOpen, onClose }) {
                                     className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all"
                                 />
                                 <p className="mt-2 text-xs text-gray-500">
-                                    Required for server-side transcription. 100% Free.
+                                    Required for analysis. 100% Free.
                                     <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline ml-1">
-                                        Get one here
+                                        Get one
                                     </a>
                                 </p>
                             </div>
@@ -66,8 +99,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                             <button
                                 onClick={handleSave}
                                 className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${saved
-                                        ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                                        : 'bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/20'
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                                    : 'bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/20'
                                     }`}
                             >
                                 {saved ? (

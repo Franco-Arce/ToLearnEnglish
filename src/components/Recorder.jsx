@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, Square, Loader2, AlertCircle } from 'lucide-react';
 
-export default function Recorder({ onTranscript, onStop }) {
+export default function Recorder({ onTranscript, onStop, onStart }) {
     const [isRecording, setIsRecording] = useState(false);
     const [status, setStatus] = useState('idle'); // idle, recording, processing, error
     const mediaRecorderRef = useRef(null);
@@ -63,6 +63,7 @@ export default function Recorder({ onTranscript, onStop }) {
 
     const startRecording = async () => {
         try {
+            if (onStart) onStart();
             const stream = await startVisualizer();
             if (!stream) throw new Error('Could not access microphone');
 
@@ -137,7 +138,7 @@ export default function Recorder({ onTranscript, onStop }) {
             const data = await response.json();
             if (data.text) {
                 onTranscript(data.text);
-                if (onStop) onStop();
+                if (onStop) onStop(data.text);
                 setStatus('idle');
             }
         } catch (error) {
@@ -164,9 +165,9 @@ export default function Recorder({ onTranscript, onStop }) {
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={status === 'processing'}
                 className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all ${status === 'processing' ? 'bg-gray-600 cursor-not-allowed' :
-                        isRecording
-                            ? 'bg-red-500 shadow-red-500/30'
-                            : 'bg-blue-500 shadow-blue-500/30'
+                    isRecording
+                        ? 'bg-red-500 shadow-red-500/30'
+                        : 'bg-blue-500 shadow-blue-500/30'
                     }`}
             >
                 {status === 'processing' ? (

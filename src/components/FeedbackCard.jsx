@@ -1,7 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle, Sparkles, Loader2, Lightbulb } from 'lucide-react';
+import { AlertCircle, CheckCircle, Sparkles, Loader2, Lightbulb, Volume2 } from 'lucide-react';
 
 export default function FeedbackCard({ transcript, analysis, isAnalyzing }) {
+    const speak = (text) => {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.cancel(); // Stop current speech
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    };
+
     return (
         <div className="w-full glass-panel p-6 min-h-[300px] flex flex-col">
             <div className="flex items-center justify-between mb-4">
@@ -60,8 +69,17 @@ export default function FeedbackCard({ transcript, analysis, isAnalyzing }) {
                             analysis.grammar_corrections.map((item, idx) => (
                                 <div key={idx} className="flex items-start gap-3 p-3 rounded bg-red-500/10 border border-red-500/20">
                                     <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
-                                    <div>
-                                        <p className="text-sm text-red-300 font-semibold">Grammar Correction</p>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm text-red-300 font-semibold">Grammar Correction</p>
+                                            <button
+                                                onClick={() => speak(item.correction)}
+                                                className="p-1 hover:bg-white/10 rounded transition-colors text-sky-400"
+                                                title="Listen to correction"
+                                            >
+                                                <Volume2 size={16} />
+                                            </button>
+                                        </div>
                                         <p className="text-xs text-gray-300 mt-1">
                                             "{item.original}" &rarr; <span className="text-green-400 font-bold">"{item.correction}"</span>
                                         </p>

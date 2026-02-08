@@ -4,6 +4,7 @@ import { BookOpen, Upload, Sparkles } from 'lucide-react';
 import Recorder from './components/Recorder';
 import FeedbackCard from './components/FeedbackCard';
 import GrammarRef from './components/GrammarRef';
+import SessionHistory from './components/SessionHistory';
 
 import SettingsModal from './components/SettingsModal';
 import { Settings } from 'lucide-react';
@@ -14,32 +15,41 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // New Settings State
+  const [level, setLevel] = useState(localStorage.getItem('app_level') || 'intermediate');
+  const [roleplay, setRoleplay] = useState(localStorage.getItem('app_roleplay') || 'general');
+
+  // Session History State
+  const [sessions, setSessions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('app_sessions');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading sessions:', e);
+      return [];
+    }
+  });
+
   const handleTranscript = (text) => {
-    // Append text and trigger analysis for the specific chunk or whole session?
-    // For simplicity, let's keep appending.
+    // If we're starting a "clean" session, we might want to clear transcript.
+    // For now, let's keep it but ensure analysis uses the latest full context if provided.
     setTranscript((prev) => (prev ? prev + ' ' + text : text));
   };
 
-  const handleStop = async () => {
-    // Debounce or wait for final transcript update? 
-    // Usually 'onStop' happens after recording, but we might have just received transcript.
-    // Let's analyze the current transcript state + whatever came last.
-    // Actually, Recorder calls onTranscript THEN onStop.
+  const handleStop = async (finalText) => {
+    const textToAnalyze = finalText || transcript;
 
-    // We need to wait a tick for state to update, or better, pass text to handleStop if possible.
-    // But since state update is async, 'transcript' variable might be stale here.
-    // Let's rely on effect or just wait a bit? 
-    // Better: let the user manually trigger? No, auto is better. 
-    // We will analyze 'transcript' but we must ensure it's up to date.
-    // A simple timeout helps, or just trusting the user recorded enough.
-
-    if (transcript.length < 5) return;
+    if (!textToAnalyze || textToAnalyze.trim().length < 2) {
+      console.warn('Text too short for analysis');
+      return;
+    }
 
     setIsAnalyzing(true);
     const apiKey = localStorage.getItem('groq_api_key');
 
     if (!apiKey) {
       setIsAnalyzing(false);
+      alert('Please configure your API Key');
       return;
     }
 
@@ -50,12 +60,29 @@ function App() {
           'Content-Type': 'application/json',
           'x-api-key': apiKey
         },
-        body: JSON.stringify({ text: transcript })
+        body: JSON.stringify({
+          text: textToAnalyze,
+          level: level,
+          roleplay: roleplay
+        })
       });
 
       if (response.ok) {
         const data = await response.json();
         setAnalysis(data);
+
+        // Save to History
+        const newSession = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          transcript: textToAnalyze,
+          analysis: data,
+          level,
+          roleplay
+        };
+        const updatedSessions = [newSession, ...sessions].slice(0, 20); // Keep last 20
+        setSessions(updatedSessions);
+        localStorage.setItem('app_sessions', JSON.stringify(updatedSessions));
       }
     } catch (error) {
       console.error('Analysis failed:', error);
@@ -66,7 +93,14 @@ function App() {
 
   return (
     <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        level={level}
+        setLevel={setLevel}
+        roleplay={roleplay}
+        setRoleplay={setRoleplay}
+      />
 
       <motion.header
         initial={{ opacity: 0, y: -20 }}
@@ -98,7 +132,11 @@ function App() {
           className="flex flex-col gap-6"
         >
           {/* Recorder Component */}
-          <Recorder onTranscript={handleTranscript} onStop={handleStop} />
+          <Recorder
+            onTranscript={handleTranscript}
+            onStop={handleStop}
+            onStart={() => setTranscript('')}
+          />
 
           {/* Upload Section (Placeholder for next task) */}
           <div className="glass-panel p-6 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors">
@@ -143,10 +181,32 @@ function App() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="w-full max-w-6xl mt-8 mb-12"
+        className="w-full max-w-6xl mt-8 mb-4"
       >
         <GrammarRef />
       </motion.div>
+
+      <SessionHistory
+        sessions={sessions}
+        onSelect={(session) => {
+          setTranscript(session.transcript);
+          setAnalysis(session.analysis);
+          setLevel(session.level || 'intermediate');
+          setRoleplay(session.roleplay || 'general');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onDelete={(id) => {
+          const updated = sessions.filter(s => s.id !== id);
+          setSessions(updated);
+          localStorage.setItem('app_sessions', JSON.stringify(updated));
+        }}
+        onClear={() => {
+          if (confirm('Are you sure you want to clear your entire history?')) {
+            setSessions([]);
+            localStorage.removeItem('app_sessions');
+          }
+        }}
+      />
     </div>
   );
 }
