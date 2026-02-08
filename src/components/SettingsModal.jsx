@@ -129,9 +129,9 @@ export default function SettingsModal({
                                         <select
                                             value={preferredVoiceURI}
                                             onChange={(e) => setPreferredVoiceURI(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer text-sm"
+                                            className={`w-full bg-black/40 border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer text-sm ${voices.length === 0 ? 'border-amber-500/50' : 'border-white/10'}`}
                                         >
-                                            <option value="">Default (Auto-detect English)</option>
+                                            <option value="">{voices.length === 0 ? '⚠️ No voices found yet...' : 'Default (Auto-detect English)'}</option>
                                             {voices
                                                 .sort((a, b) => {
                                                     const aIsEn = a.lang.startsWith('en');
@@ -159,9 +159,20 @@ export default function SettingsModal({
                                         Test
                                     </button>
                                 </div>
-                                <p className="mt-2 text-[10px] text-gray-500 italic">
-                                    Select a voice with 🇺🇸 or "en-" to ensure English pronunciation.
-                                </p>
+                                {voices.length === 0 ? (
+                                    <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                        <p className="text-[11px] text-amber-400 font-bold mb-1">
+                                            No English voices detected in your system!
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                                            To fix this, go to <b>Windows Settings &gt; Time &amp; Language &gt; Speech</b> and install the <b>"English (US)"</b> pack. Then restart your browser.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="mt-2 text-[10px] text-gray-500 italic">
+                                        Select a voice with 🇺🇸 or "en-" for best results. Total voices found: {voices.length}.
+                                    </p>
+                                )}
                             </div>
 
                             <div>
