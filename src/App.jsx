@@ -13,6 +13,7 @@ import { Settings } from 'lucide-react';
 
 function App() {
   const [transcript, setTranscript] = useState('');
+  const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [hasKey, setHasKey] = useState(!!localStorage.getItem('groq_api_key'));
