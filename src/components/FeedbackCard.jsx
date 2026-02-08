@@ -1,23 +1,53 @@
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle, Sparkles, Loader2, Lightbulb, Volume2 } from 'lucide-react';
 
 export default function FeedbackCard({ transcript, analysis, isAnalyzing }) {
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        const loadVoices = () => {
+            const v = window.speechSynthesis.getVoices();
+            if (v.length > 0) setVoices(v);
+        };
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, []);
+
     const speak = (text) => {
         if (!window.speechSynthesis) return;
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Find an English voice
-        const voices = window.speechSynthesis.getVoices();
-        const englishVoice = voices.find(v => v.lang.startsWith('en-')) || voices.find(v => v.lang === 'en-US');
+        // Priority list for natural English voices
+        const priorityPatterns = [
+            /Google US English/i,
+            /Google UK English/i,
+            /Microsoft David/i,
+            /Microsoft Zira/i,
+            /^en-US$/i,
+            /^en-GB$/i,
+            /en-/i
+        ];
 
-        if (englishVoice) {
-            utterance.voice = englishVoice;
+        let selectedVoice = null;
+        for (const pattern of priorityPatterns) {
+            selectedVoice = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
+            if (selectedVoice) break;
         }
 
-        utterance.lang = 'en-US';
-        utterance.rate = 0.9;
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang;
+        } else {
+            utterance.lang = 'en-US';
+        }
+
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
         window.speechSynthesis.speak(utterance);
     };
 

@@ -6,6 +6,7 @@ import FeedbackCard from './components/FeedbackCard';
 import GrammarRef from './components/GrammarRef';
 import SessionHistory from './components/SessionHistory';
 import LandingView from './components/LandingView';
+import ConversationMode from './components/ConversationMode';
 
 import SettingsModal from './components/SettingsModal';
 import { Settings } from 'lucide-react';
@@ -13,9 +14,9 @@ import { Settings } from 'lucide-react';
 function App() {
   const [transcript, setTranscript] = useState('');
   const [analysis, setAnalysis] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [hasKey, setHasKey] = useState(!!localStorage.getItem('groq_api_key'));
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, conversation
 
   // New Settings State
   const [level, setLevel] = useState(localStorage.getItem('app_level') || 'intermediate');
@@ -122,8 +123,18 @@ function App() {
           </h1>
         </div>
         <nav className="flex gap-4 items-center">
-          <button className="hidden md:block text-sm font-bold text-slate-400 hover:text-white transition-colors">Dashboard</button>
-          <button className="hidden md:block text-sm font-bold text-slate-400 hover:text-white transition-colors">Practice</button>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`text-sm font-bold transition-colors ${activeTab === 'dashboard' ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('conversation')}
+            className={`text-sm font-bold transition-colors ${activeTab === 'conversation' ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
+          >
+            Conversation
+          </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
             className="p-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/10"
@@ -134,60 +145,70 @@ function App() {
         </nav>
       </motion.header>
 
-      <main className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column: Input & Controls */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex flex-col gap-6"
-        >
-          {/* Recorder Component */}
-          <Recorder
-            onTranscript={handleTranscript}
-            onStop={handleStop}
-            onStart={() => setTranscript('')}
-          />
+      <main className="w-full max-w-6xl">
+        <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' ? (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+            >
+              {/* Left Column: Input & Controls */}
+              <div className="flex flex-col gap-6">
+                <Recorder
+                  onTranscript={handleTranscript}
+                  onStop={handleStop}
+                  onStart={() => setTranscript('')}
+                />
 
-          {/* Upload Section */}
-          <div className="glass-panel p-6 flex items-center justify-between cursor-not-allowed border-white/5 opacity-80 group">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
-                <Upload size={24} />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-200">Upload Audio</h3>
-                <p className="text-xs text-slate-500">Analyze pre-recorded files (MP3, WAV)</p>
-              </div>
-            </div>
-            <div className="px-3 py-1 text-[10px] font-black tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
-              COMING SOON
-            </div>
-          </div>
+                {/* Upload Section */}
+                <div className="glass-panel p-6 flex items-center justify-between cursor-not-allowed border-white/5 opacity-80 group">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
+                      <Upload size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-200">Upload Audio</h3>
+                      <p className="text-xs text-slate-500">Analyze pre-recorded files (MP3, WAV)</p>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1 text-[10px] font-black tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                    COMING SOON
+                  </div>
+                </div>
 
-          {/* Quick Tips */}
-          <div className="glass-panel p-6 border-white/5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-sky-500/10 rounded-lg text-sky-400">
-                <BookOpen size={20} />
+                <div className="glass-panel p-6 border-white/5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-sky-500/10 rounded-lg text-sky-400">
+                      <BookOpen size={20} />
+                    </div>
+                    <h3 className="font-bold text-lg text-slate-200">Learning Tips</h3>
+                  </div>
+                  <p className="text-sm text-slate-400 leading-relaxed font-medium">
+                    Try to speak clearly and at a moderate pace. The AI analyzes your grammar, pronunciation, and fluency in real-time to provide instant feedback.
+                  </p>
+                </div>
               </div>
-              <h3 className="font-bold text-lg text-slate-200">Learning Tips</h3>
-            </div>
-            <p className="text-sm text-slate-400 leading-relaxed font-medium">
-              Try to speak clearly and at a moderate pace. The AI analyzes your grammar, pronunciation, and fluency in real-time to provide instant feedback.
-            </p>
-          </div>
-        </motion.div>
 
-        {/* Right Column: Feedback & Analysis */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="h-full"
-        >
-          <FeedbackCard transcript={transcript} analysis={analysis} isAnalyzing={isAnalyzing} />
-        </motion.div>
+              {/* Right Column: Feedback */}
+              <div className="h-full">
+                <FeedbackCard transcript={transcript} analysis={analysis} isAnalyzing={isAnalyzing} />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="conversation"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="glass-panel border-white/10"
+            >
+              <ConversationMode level={level} roleplay={roleplay} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       <motion.div
